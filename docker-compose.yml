@@ -9,12 +9,12 @@ services:
     command: ["/src/tools/dev-django.sh", "0.0.0.0:8000"]
     environment:
       ADMIN_USERNAME: "admin"
-      ADMIN_PASSWORD: "password"
+      ADMIN_PASSWORD: "${PASSWORD}"
       ADMIN_EMAIL: "admin@example.com"
       DATABASE_URL: "postgres://doccano:doccano@postgres:5432/doccano?sslmode=disable"
       ALLOW_SIGNUP: "False" 
     ports:
-      - 8000:8000
+      - 80:8000
 
   webpack:
     image: node:8
