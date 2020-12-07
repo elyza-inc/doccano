@@ -87,12 +87,10 @@ export default {
       url: '',
       offset: getOffsetFromUrl(window.location.href),
       picked: 'all',
-      ordering: '',
       count: 0,
       prevLimit: 0,
       paginationPages: 0,
       paginationPage: 0,
-      singleClassClassification: false,
       isAnnotationApprover: false,
       isMetadataActive: false,
       isAnnotationGuidelineActive: false,
@@ -178,20 +176,6 @@ export default {
       });
     },
 
-    documentMetadataFor(i) {
-      const document = this.docs[i];
-      if (document == null || document.meta == null) {
-        return null;
-      }
-
-      const metadata = JSON.parse(document.meta);
-      if (isEmpty(metadata)) {
-        return null;
-      }
-
-      return metadata;
-    },
-
     getState() {
       if (this.picked === 'all') {
         return '';
@@ -204,14 +188,14 @@ export default {
 
     async submit() {
       const state = this.getState();
-      this.url = `docs?q=${this.searchQuery}&is_checked=${state}&offset=${this.offset}&ordering=${this.ordering}`;
+      this.url = `docs?q=${this.searchQuery}&is_checked=${state}&offset=${this.offset}`;
       await this.search();
       this.pageNumber = 0;
     },
 
     removeLabel(annotation) {
       const docId = this.docs[this.pageNumber].id;
-      return HTTP.delete(`docs/${docId}/annotations/${annotation.id}`).then(() => {
+      HTTP.delete(`docs/${docId}/annotations/${annotation.id}`).then(() => {
         const index = this.annotations[this.pageNumber].indexOf(annotation);
         this.annotations[this.pageNumber].splice(index, 1);
       });
@@ -238,18 +222,15 @@ export default {
       const approved = !this.documentAnnotationsAreApproved;
 
       HTTP.post(`docs/${document.id}/approve-labels`, { approved }).then((response) => {
-        Object.assign(this.docs[this.pageNumber], response.data);
+        const documents = this.docs.slice();
+        documents[this.pageNumber] = response.data;
+        this.docs = documents;
       });
     },
   },
 
   watch: {
     picked() {
-      this.submit();
-    },
-
-    ordering() {
-      this.offset = 0;
       this.submit();
     },
 
@@ -271,7 +252,6 @@ export default {
       this.labels = response.data;
     });
     HTTP.get().then((response) => {
-      this.singleClassClassification = response.data.single_class_classification;
       this.guideline = response.data.guideline;
       const roles = response.data.current_users_role;
       this.isAnnotationApprover = roles.is_annotation_approver || roles.is_project_admin;
@@ -306,7 +286,17 @@ export default {
     },
 
     documentMetadata() {
-      return this.documentMetadataFor(this.pageNumber);
+      const document = this.docs[this.pageNumber];
+      if (document == null || document.meta == null) {
+        return null;
+      }
+
+      const metadata = JSON.parse(document.meta);
+      if (isEmpty(metadata)) {
+        return null;
+      }
+
+      return metadata;
     },
 
     id2label() {

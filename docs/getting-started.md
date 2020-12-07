@@ -1,70 +1,102 @@
 # Getting started
 
+## Quick install guide
+
+First of all, you have to clone the repository:
+
+```bash
+git clone https://github.com/chakki-works/doccano.git
+cd doccano
+```
+
+To install doccano, there are three options:
+
+### Option1: Pull the production Docker image
+
+```bash
+docker pull chakkiworks/doccano
+```
+
+### Option2: Pull the development Docker-Compose images
+
+```bash
+docker-compose pull
+```
+
+### Option3: Setup Python environment
+
+First we need to install the dependencies. Run the following commands:
+
+```bash
+pip install -r requirements.txt
+cd app
+```
+
+Next we need to start the webpack server so that the frontend gets compiled continuously.
+Run the following commands in a new shell:
+
+```bash
+cd server/static
+npm install
+npm run build
+# npm start  # for developers
+cd ..
+```
+
 ## Usage
 
-doccano has two options to run:
+Let’s start the development server and explore it.
 
-- (Recommended) Docker Compose
-- Docker
+Depending on your installation method, there are two options:
 
-The usage of docker compose version is explained in the [README.md](https://github.com/doccano/doccano/blob/master/README.md#usage). We highly recommend that you should use docker compose version. However, we explain the usage of Docker version and Python/Node version for the additional information.
+### Option1: Running the Docker image as a Container
 
-### Docker
-
-As a one-time setup, create a Docker container for Doccano:
+First, run a Docker container:
 
 ```bash
-docker pull doccano/doccano
-docker container create --name doccano \
-  -e "ADMIN_USERNAME=admin" \
-  -e "ADMIN_EMAIL=admin@example.com" \
-  -e "ADMIN_PASSWORD=password" \
-  -p 8000:8000 doccano/doccano
+docker run -d --name doccano -p 8000:80 chakkiworks/doccano
 ```
 
-Next, start Doccano by running the container:
+Then, execute `create-admin.sh` script for creating a superuser.
 
 ```bash
-docker container start doccano
+docker exec doccano tools/create-admin.sh "admin" "admin@example.com" "password"
 ```
 
-To stop the container, run `docker container stop doccano -t 5`.
-All data created in the container will persist across restarts.
+### Option2: Running the development Docker-Compose stack
 
-Go to <http://127.0.0.1:8000/>.
-
-### For Developers
-
-You can setup local development environment as follows:
+We can use docker-compose to set up the webpack server, django server, database, etc. all in one command:
 
 ```bash
-$ git clone https://github.com/doccano/doccano.git
-$ cd doccano
-$ docker-compose -f docker-compose.dev.yml up
+docker-compose up
 ```
 
-Go to <http://127.0.0.1:3000/>.
+Now, open a Web browser and go to <http://127.0.0.1:8000/login/>. You should see the login screen:
 
-Or, you can setup via Python and Node.js:
+![Login form](./login_form.png)
 
-### Python
+### Option3: Running Django development server
+
+Before running, we need to make migration. Run the following command:
 
 ```bash
-$ git clone https://github.com/doccano/doccano.git
-$ cd doccano/app
-$ pip install -r requirements.txt
-$ python manage.py migrate
-$ python manage.py create_roles
-$ python manage.py create_admin --noinput --username "admin" --email "admin@example.com" --password "password"
-$ python manage.py runserver
+python manage.py migrate
 ```
 
-### Node.js
+Next we need to create a user who can login to the admin site. Run the following command:
 
 ```bash
-$ cd doccano/frontend
-$ yarn install
-$ yarn dev
+python manage.py create_admin --noinput --username "admin" --email "admin@example.com" --password "password"
 ```
 
-Go to <http://127.0.0.1:3000/>.
+Developers can also validate that the project works as expected by running the tests:
+
+```bash
+python manage.py test server.tests
+```
+
+Finally, to start the server, run the following command:
+
+```bash
+python manage.py runserver
+```

@@ -58,24 +58,22 @@ export default {
   mixins: [annotationMixin],
 
   methods: {
+    getAnnotation(label) {
+      return this.annotations[this.pageNumber].find(annotation => annotation.label === label.id);
+    },
+
     async submit() {
       const state = this.getState();
-      this.url = `docs?q=${this.searchQuery}&doc_annotations__isnull=${state}&offset=${this.offset}&ordering=${this.ordering}`;
+      this.url = `docs?q=${this.searchQuery}&doc_annotations__isnull=${state}&offset=${this.offset}`;
       await this.search();
       this.pageNumber = 0;
     },
 
     async addLabel(label) {
-      const annotations = this.annotations[this.pageNumber];
-      const annotation = annotations.find(item => item.label === label.id);
-
+      const annotation = this.getAnnotation(label);
       if (annotation) {
         this.removeLabel(annotation);
       } else {
-        if (this.singleClassClassification && annotations.length >= 1) {
-          await Promise.all(annotations.map(item => this.removeLabel(item)));
-        }
-
         const docId = this.docs[this.pageNumber].id;
         const payload = {
           label: label.id,

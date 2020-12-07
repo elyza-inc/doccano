@@ -1,17 +1,15 @@
-import base64
 import csv
 import io
 import itertools
 import json
-import mimetypes
 import re
 from collections import defaultdict
+from random import Random
 
 import conllu
 from chardet import UniversalDetector
 from django.db import transaction
 from django.conf import settings
-from colour import Color
 import pyexcel
 from rest_framework.renderers import JSONRenderer
 from seqeval.metrics.sequence_labeling import get_entities
@@ -68,7 +66,7 @@ class BaseStorage(object):
         return [label for label in labels if label not in created]
 
     @classmethod
-    def to_serializer_format(cls, labels, created):
+    def to_serializer_format(cls, labels, created, random_seed=None):
         existing_shortkeys = {(label.suffix_key, label.prefix_key)
                               for label in created.values()}
 
@@ -83,10 +81,9 @@ class BaseStorage(object):
                 serializer_label['prefix_key'] = shortkey[1]
                 existing_shortkeys.add(shortkey)
 
-            background_color = Color(pick_for=label)
-            text_color = Color('white') if background_color.get_luminance() < 0.5 else Color('black')
-            serializer_label['background_color'] = background_color.hex
-            serializer_label['text_color'] = text_color.hex
+            color = Color.random(seed=random_seed)
+            serializer_label['background_color'] = color.hex
+            serializer_label['text_color'] = color.contrast_color.hex
 
             serializer_labels.append(serializer_label)
 
@@ -219,41 +216,10 @@ class Seq2seqStorage(BaseStorage):
         return annotations
 
 
-class Speech2textStorage(BaseStorage):
-    """Store json for speech2text.
-
-    The format is as follows:
-    {"audio": "data:audio/mpeg;base64,...", "transcription": "こんにちは、世界!"}
-    ...
-    """
-    @transaction.atomic
-    def save(self, user):
-        for data in self.data:
-            for audio in data:
-                audio['text'] = audio.pop('audio')
-            doc = self.save_doc(data)
-            annotations = self.make_annotations(doc, data)
-            self.save_annotation(annotations, user)
-
-    @classmethod
-    def make_annotations(cls, docs, data):
-        annotations = []
-        for doc, datum in zip(docs, data):
-            try:
-                annotations.append({'document': doc.id, 'text': datum['transcription']})
-            except KeyError:
-                continue
-        return annotations
-
-
 class FileParser(object):
 
     def parse(self, file):
         raise NotImplementedError()
-
-    @staticmethod
-    def encode_metadata(data):
-        return json.dumps(data, ensure_ascii=False)
 
 
 class CoNLLParser(FileParser):
@@ -385,17 +351,13 @@ class ExcelParser(FileParser):
                 yield data
                 data = []
             # Only text column
-            if len(row) <= len(columns) and len(row) == 1:
+            if len(row) == len(columns) and len(row) == 1:
                 data.append({'text': row[0]})
             # Text, labels and metadata columns
-            elif 2 <= len(row) <= len(columns):
-                datum = dict(zip(columns, row))
-                text, label = datum.pop('text'), datum.pop('label')
-                meta = FileParser.encode_metadata(datum)
-                if label != '':
-                    j = {'text': text, 'labels': [label], 'meta': meta}
-                else:
-                    j = {'text': text, 'meta': meta}
+            elif len(row) == len(columns) and len(row) >= 2:
+                text, label = row[:2]
+                meta = json.dumps(dict(zip(columns[2:], row[2:])))
+                j = {'text': text, 'labels': [label], 'meta': meta}
                 data.append(j)
             else:
                 raise FileParseException(line_num=i, line=row)
@@ -415,25 +377,12 @@ class JSONParser(FileParser):
                 data = []
             try:
                 j = json.loads(line)
-                j['meta'] = FileParser.encode_metadata(j.get('meta', {}))
+                j['meta'] = json.dumps(j.get('meta', {}))
                 data.append(j)
             except json.decoder.JSONDecodeError:
                 raise FileParseException(line_num=i, line=line)
         if data:
             yield data
-
-
-class AudioParser(FileParser):
-    def parse(self, file):
-        file_type, _ = mimetypes.guess_type(file.name, strict=False)
-        if not file_type:
-            raise FileParseException(line_num=1, line='Unable to guess file type')
-
-        audio = base64.b64encode(file.read())
-        yield [{
-            'audio': f'data:{file_type};base64,{audio.decode("ascii")}',
-            'meta': json.dumps({'filename': file.name}),
-        }]
 
 
 class JSONLRenderer(JSONRenderer):
@@ -499,6 +448,47 @@ class CSVPainter(JSONPainter):
             for a in annotations:
                 res.append({**d, **a})
         return res
+
+
+class Color:
+    def __init__(self, red, green, blue):
+        self.red = red
+        self.green = green
+        self.blue = blue
+
+    @property
+    def contrast_color(self):
+        """Generate black or white color.
+
+        Ensure that text and background color combinations provide
+        sufficient contrast when viewed by someone having color deficits or
+        when viewed on a black and white screen.
+
+        Algorithm from w3c:
+        * https://www.w3.org/TR/AERT/#color-contrast
+        """
+        return Color.white() if self.brightness < 128 else Color.black()
+
+    @property
+    def brightness(self):
+        return ((self.red * 299) + (self.green * 587) + (self.blue * 114)) / 1000
+
+    @property
+    def hex(self):
+        return '#{:02x}{:02x}{:02x}'.format(self.red, self.green, self.blue)
+
+    @classmethod
+    def white(cls):
+        return cls(red=255, green=255, blue=255)
+
+    @classmethod
+    def black(cls):
+        return cls(red=0, green=0, blue=0)
+
+    @classmethod
+    def random(cls, seed=None):
+        rgb = Random(seed).choices(range(256), k=3)
+        return cls(*rgb)
 
 
 def iterable_to_io(iterable, buffer_size=io.DEFAULT_BUFFER_SIZE):
