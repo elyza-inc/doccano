@@ -6,17 +6,6 @@ root="$(dirname "$0")/.."
 app="${root}/app"
 venv="${root}/venv"
 
-if [[ ! -f "${venv}/bin/python" ]]; then
-  echo "Creating virtualenv"
-  mkdir -p "${venv}"
-  python3 -m venv "${venv}"
-  "${venv}/bin/pip" install --upgrade pip setuptools
-fi
-
-echo "Installing dependencies"
-apt-get update && apt-get install -y g++ unixodbc-dev # pyodbc build dependencies
-"${venv}/bin/pip" install -r "${root}/requirements.txt"
-
 echo "Initializing database"
 "${venv}/bin/python" "${app}/manage.py" wait_for_db
 "${venv}/bin/python" "${app}/manage.py" migrate

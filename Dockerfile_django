@@ -1,0 +1,13 @@
+FROM python:3.6
+
+COPY . .
+RUN set -o errexit
+
+RUN echo "Creating virtualenv"
+RUN mkdir -p ./venv
+RUN python3 -m venv ./venv
+RUN "./venv/bin/pip" install --upgrade pip setuptools
+
+RUN echo "Installing dependencies"
+RUN apt-get update && apt-get install -y g++ unixodbc-dev # pyodbc build dependencies
+RUN "./venv/bin/pip" install -r "./requirements.txt"

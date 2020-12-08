@@ -2,7 +2,9 @@ version: "3"
 services:
 
   django:
-    image: python:3.6
+    build:
+      context: .
+      dockerfile: ./Dockerfile_django
     volumes:
       - .:/src
       - venv:/src/venv
@@ -17,11 +19,11 @@ services:
       - 80:8000
 
   webpack:
-    image: node:8
+    build: ./app/server/static
     volumes:
-      - .:/src
+      - .:/src/app/server/static
       - node_modules:/src/app/server/static/node_modules
-    command: ["/src/tools/dev-webpack.sh"]
+    command: ["npm", "start"]
     environment:
       WEBPACK_HOST: "0.0.0.0"
       WEBPACK_PORT: "8080"
