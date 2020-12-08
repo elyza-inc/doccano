@@ -19,11 +19,12 @@ services:
       - 80:8000
 
   webpack:
-    build: ./app/server/static
+    build: 
+      context: .
+      dockerfile: ./Dockerfile_webpack
     volumes:
-      - .:/src/app/server/static
+      - .:/src
       - node_modules:/src/app/server/static/node_modules
-    command: ["npm", "start"]
     environment:
       WEBPACK_HOST: "0.0.0.0"
       WEBPACK_PORT: "8080"

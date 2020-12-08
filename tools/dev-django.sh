@@ -2,7 +2,7 @@
 
 set -o errexit
 
-root="$(dirname "$0")/.."
+root="./"
 app="${root}/app"
 venv="${root}/venv"
 

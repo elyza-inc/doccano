@@ -1,0 +1,6 @@
+FROM node:8
+
+COPY . .
+WORKDIR /app/server/static
+RUN npm install
+CMD npm start
