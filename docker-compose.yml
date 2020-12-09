@@ -22,7 +22,7 @@ services:
       context: .
       dockerfile: ./Dockerfile_webpack
     volumes:
-      - ./app/server/static:/app/server/static
+      - ./app/server/static/webpack-stats.json:/app/server/static/webpack-stats.json
     environment:
       WEBPACK_HOST: "0.0.0.0"
       WEBPACK_PORT: "8080"
