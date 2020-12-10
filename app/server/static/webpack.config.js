@@ -36,6 +36,7 @@ module.exports = {
         host: webpackHost,
         hot: true,
         quiet: false,
+        public: publicHost,
         headers: { 'Access-Control-Allow-Origin': '*' }
     },
     watchOptions: {
