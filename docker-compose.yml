@@ -25,6 +25,7 @@ services:
       - ./app/server/static/webpack-stats.json:/app/server/static/webpack-stats.json
     environment:
       WEBPACK_HOST: "0.0.0.0"
+      PUBLIC_HOST: "${PUBLIC_HOST}"
       WEBPACK_PORT: "8080"
       WEBPACK_POLL_MILLIS: "1000"
     ports:
